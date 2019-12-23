@@ -23,6 +23,10 @@ Set-StrictMode -Version Latest
     Update-openHAB -OHDirectory C:\oh-snapshot -OHVersion 2.3.0-SNAPSHOT
 #>
 
+###########################################################################
+# NOTE: changes in this script should be reflected in update.sh as well
+###########################################################################
+
 Function Update-openHAB() {
     [CmdletBinding()]
     param(
@@ -373,7 +377,7 @@ Function Update-openHAB() {
     }
     
     # Tell the user what we are processing
-    Write-Host -ForegroundColor Yellow "Using $OHConf as conf folder"
+    Write-Host -ForegroundColor Yellow "Using $OHConf as conf folder"`
     Write-Host -ForegroundColor Yellow "Using $OHUserData as userdata folder"
     Write-Host -ForegroundColor Yellow "Using $OHRuntime as runtime folder"
     Write-Host -ForegroundColor Yellow "Using $OHAddons as addons folder"
@@ -381,44 +385,40 @@ Function Update-openHAB() {
     # Get current openHAB version
     $CurrentVersion = GetOpenHABVersion $OHUserData
     if ($CurrentVersion -eq "") {
-        exit PrintAndReturn "Can't get the current openhab version from $OHDirectory - exiting"
+        exit PrintAndReturn "Can't get the current openhab version from $OHUserData\etc\version.properties"
     }
 
-    # Determine if it's a snapshot
-    $CurrentVersionSnapshot = $False;
-    if ($CurrentVersion.EndsWith("-SNAPSHOT", "CurrentCultureIgnoreCase")) {
-        $CurrentVersionSnapshot = $True;
-        $CurrentVersion = $CurrentVersion.Substring(0, $CurrentVersion.Length - "-SNAPSHOT".Length);
-    }
-
-    # Tell the user our current version
-    if ($CurrentVersionSnapshot) {
-        Write-Host -ForegroundColor Yellow "The current version is $CurrentVersion-SNAPSHOT"
-    } else {
-        Write-Host -ForegroundColor Yellow "The current version is $CurrentVersion"        
-    }
-
-    # If the version was not specified,
+	# Get the current version (d.d.d) 
+	#    If stable, simply use d.d.d
+	#    If snapshot, strip the "-snapshot" part (d.d.d-snapshort)
+	#    If milestone, strip the milestone part (d.d.d.milestone)
+    $parts = $CurrentVersion.Split(".")
+	if (($parts.Length -lt 3) -or ($parts.Length -gt 4)) {
+	   exit PrintAndReturn "Current openhab version from $OHUserData\etc\version.properties is malformed.  Should be either d.d.d (for stable) or d.d.d-snapshot (for snapshot) or d.d.d.d (for milestones) - malformed version: $CurrentVersion"
+	}
+	
+	$CurrentVersion = $parts[0] + "." + $parts[1] + "." + $parts[2]
+	Write-Host -ForegroundColor Yellow "The current version is $CurrentVersion"        
+	
+    # If the OHVersion parameter was not specified,
     #    If the current version is snapshot  - make OHVersion the same snapshot
     #    If the current version is stable    - make OHVersion the next minor upgrade (current version 2.3.0 would make our OHversion 2.4.0)
     #    If the current version is milestone - make OHVersion the stable version (2.3.0.M6 becomes 2.3.0)
-    if (-Not $OHVersion) {
-        $parts = $CurrentVersion.Split(".")
-        if ($parts.Length -eq 3) {
-            if ($CurrentVersionSnapshot -eq $True) {
-                $OHVersion = $CurrentVersion + "-SNAPSHOT"
-            } else {
-                $OHVersion = $parts[0] + "." + ([int]$parts[1] + 1) + "." + $parts[2]
-            }
-        } elseif ($parts.Length -eq 4) {
-            $OHVersion = $parts[0] + "." + $parts[1] + "." + $parts[2]
-        }
-        else {
-            exit PrintAndReturn "The current version $CurrentVersion was not formatted correctly (d.d.d)"
-        }
-
-    }
-
+	if (-Not $OHVersion) {
+		if ($parts.Length -eq 3) {
+			if ($CurrentVersion.EndsWith("-SNAPSHOT", "CurrentCultureIgnoreCase")) {
+				$OHVersion = $CurrentVersion
+			} else {
+				$OHVersion = $parts[0] + "." + ([int]$parts[1] + 1) + "." + $parts[2]
+			}
+		} elseif ($parts.Length -eq 4) {
+			$OHVersion = $parts[0] + "." + $parts[1] + "." + $parts[2]
+		}
+		else {
+			exit PrintAndReturn "The current version $CurrentVersion was not formatted correctly (d.d.d)"
+		}
+	}
+	
     # If snapshot was defined, add "-snapshot" to the OHVersion if not already present
     if ($Snapshot -eq $true) {
         BoxMessage "-SNAPSHOT is deprecated - please put '-snapshot' in OHVersion instead (ex: 2.4.0-snapshot)" Magenta
