@@ -377,7 +377,7 @@ Function Update-openHAB() {
     }
     
     # Tell the user what we are processing
-    Write-Host -ForegroundColor Yellow "Using $OHConf as conf folder"`
+    Write-Host -ForegroundColor Yellow "Using $OHConf as conf folder"
     Write-Host -ForegroundColor Yellow "Using $OHUserData as userdata folder"
     Write-Host -ForegroundColor Yellow "Using $OHRuntime as runtime folder"
     Write-Host -ForegroundColor Yellow "Using $OHAddons as addons folder"
